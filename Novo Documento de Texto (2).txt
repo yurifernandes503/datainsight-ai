@@ -1,0 +1,497 @@
+================================================================================
+                    GUIA COMPLETO - DATAINSIGHT AI
+                    Execução na Universidade - Passo a Passo
+================================================================================
+
+REQUISITOS INICIAIS:
+- Windows 10/11
+- Conexão com internet
+- Chave API do Gemini (https://makersuite.google.com/app/apikey)
+
+================================================================================
+                            PARTE 1: INSTALAÇÃO
+================================================================================
+
+PASSO 1: INSTALAR NODE.JS
+--------------------------
+1. Abrir PowerShell como Administrador
+2. Instalar Chocolatey:
+   Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+3. Instalar Node.js:
+   choco install nodejs
+
+4. Verificar instalação:
+   node --version
+   npm --version
+
+PASSO 2: CRIAR PROJETO
+-----------------------
+1. Criar pasta do projeto:
+   mkdir datainsight-ai
+   cd datainsight-ai
+
+2. Criar projeto Next.js:
+   npx create-next-app@latest . --typescript --tailwind --eslint --app
+
+   Responder:
+   ✅ TypeScript? → Yes
+   ✅ ESLint? → Yes  
+   ✅ Tailwind CSS? → Yes
+   ✅ src/ directory? → No
+   ✅ App Router? → Yes
+   ✅ import alias? → No
+
+PASSO 3: INSTALAR DEPENDÊNCIAS
+-------------------------------
+npm install @google/generative-ai recharts lucide-react @radix-ui/react-tabs @radix-ui/react-select @radix-ui/react-alert-dialog class-variance-authority clsx tailwind-merge --legacy-peer-deps
+
+PASSO 4: CONFIGURAR CHAVE API
+------------------------------
+echo GEMINI_API_KEY=AIzaSyCg8AYs8jCU4JPwV74FGyVkhI09_aBydJk | Out-File -FilePath .env.local -Encoding utf8
+echo "Arquivo .env.local criado!"
+
+
+================================================================================
+                            PARTE 2: CÓDIGO
+================================================================================
+
+PASSO 5: CRIAR ESTRUTURA
+-------------------------
+mkdir components
+mkdir lib
+
+PASSO 6: CRIAR ARQUIVOS (copiar código exato)
+----------------------------------------------
+
+ARQUIVO: lib/utils.ts
+---------------------
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+ARQUIVO: components/ui/card.tsx
+-------------------------------
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)} {...props} />
+))
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
+  ),
+)
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h3 ref={ref} className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
+  ),
+)
+CardTitle.displayName = "CardTitle"
+
+const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <p ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
+  ),
+)
+CardDescription.displayName = "CardDescription"
+
+const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />,
+)
+CardContent.displayName = "CardContent"
+
+export { Card, CardHeader, CardTitle, CardDescription, CardContent }
+
+ARQUIVO: components/ui/button.tsx
+---------------------------------
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  size?: "default" | "sm" | "lg" | "icon"
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant = "default", size = "default", asChild = false, ...props }, ref) => {
+    const Comp = asChild ? "span" : "button"
+    return (
+      <Comp
+        className={cn(
+          "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+          {
+            "bg-primary text-primary-foreground hover:bg-primary/90": variant === "default",
+            "bg-destructive text-destructive-foreground hover:bg-destructive/90": variant === "destructive",
+            "border border-input bg-background hover:bg-accent hover:text-accent-foreground": variant === "outline",
+            "bg-secondary text-secondary-foreground hover:bg-secondary/80": variant === "secondary",
+            "hover:bg-accent hover:text-accent-foreground": variant === "ghost",
+            "text-primary underline-offset-4 hover:underline": variant === "link",
+          },
+          {
+            "h-10 px-4 py-2": size === "default",
+            "h-9 rounded-md px-3": size === "sm",
+            "h-11 rounded-md px-8": size === "lg",
+            "h-10 w-10": size === "icon",
+          },
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    )
+  },
+)
+Button.displayName = "Button"
+
+export { Button }
+
+ARQUIVO: components/ui/badge.tsx
+--------------------------------
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "secondary" | "destructive" | "outline"
+}
+
+function Badge({ className, variant = "default", ...props }: BadgeProps) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+        {
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80": variant === "default",
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80": variant === "secondary",
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80": variant === "destructive",
+          "text-foreground": variant === "outline",
+        },
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Badge }
+
+ARQUIVO: components/ui/alert.tsx
+--------------------------------
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+const Alert = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "destructive" }>(
+  ({ className, variant = "default", ...props }, ref) => (
+    <div
+      ref={ref}
+      role="alert"
+      className={cn(
+        "relative w-full rounded-lg border p-4",
+        {
+          "bg-background text-foreground": variant === "default",
+          "border-destructive/50 text-destructive dark:border-destructive": variant === "destructive",
+        },
+        className,
+      )}
+      {...props}
+    />
+  ),
+)
+Alert.displayName = "Alert"
+
+const AlertDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("text-sm [&_p]:leading-relaxed", className)} {...props} />
+  ),
+)
+AlertDescription.displayName = "AlertDescription"
+
+export { Alert, AlertDescription }
+
+ARQUIVO: components/ui/tabs.tsx
+-------------------------------
+import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
+import { cn } from "@/lib/utils"
+
+const Tabs = TabsPrimitive.Root
+
+const TabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      className,
+    )}
+    {...props}
+  />
+))
+TabsList.displayName = TabsPrimitive.List.displayName
+
+const TabsTrigger = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      className,
+    )}
+    {...props}
+  />
+))
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+
+const TabsContent = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Content
+    ref={ref}
+    className={cn(
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      className,
+    )}
+    {...props}
+  />
+))
+TabsContent.displayName = TabsPrimitive.Content.displayName
+
+export { Tabs, TabsList, TabsTrigger, TabsContent }
+
+ARQUIVO: components/ui/select.tsx
+---------------------------------
+import * as React from "react"
+import * as SelectPrimitive from "@radix-ui/react-select"
+import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { cn } from "@/lib/utils"
+
+const Select = SelectPrimitive.Root
+const SelectGroup = SelectPrimitive.Group
+const SelectValue = SelectPrimitive.Value
+
+const SelectTrigger = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      className,
+    )}
+    {...props}
+  >
+    {children}
+    <SelectPrimitive.Icon asChild>
+      <ChevronDown className="h-4 w-4 opacity-50" />
+    </SelectPrimitive.Icon>
+  </SelectPrimitive.Trigger>
+))
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+
+const SelectScrollUpButton = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.ScrollUpButton
+    ref={ref}
+    className={cn("flex cursor-default items-center justify-center py-1", className)}
+    {...props}
+  >
+    <ChevronUp className="h-4 w-4" />
+  </SelectPrimitive.ScrollUpButton>
+))
+SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+
+const SelectScrollDownButton = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.ScrollDownButton
+    ref={ref}
+    className={cn("flex cursor-default items-center justify-center py-1", className)}
+    {...props}
+  >
+    <ChevronDown className="h-4 w-4" />
+  </SelectPrimitive.ScrollDownButton>
+))
+SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+
+const SelectContent = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({ className, children, position = "popper", ...props }, ref) => (
+  <SelectPrimitive.Portal>
+    <SelectPrimitive.Content
+      ref={ref}
+      className={cn(
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        position === "popper" &&
+          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+        className,
+      )}
+      position={position}
+      {...props}
+    >
+      <SelectScrollUpButton />
+      <SelectPrimitive.Viewport
+        className={cn("p-1", position === "popper" && "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]")}
+      >
+        {children}
+      </SelectPrimitive.Viewport>
+      <SelectScrollDownButton />
+    </SelectPrimitive.Content>
+  </SelectPrimitive.Portal>
+))
+SelectContent.displayName = SelectPrimitive.Content.displayName
+
+const SelectLabel = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Label ref={ref} className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)} {...props} />
+))
+SelectLabel.displayName = SelectPrimitive.Label.displayName
+
+const SelectItem = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Item
+    ref={ref}
+    className={cn(
+      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      className,
+    )}
+    {...props}
+  >
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <SelectPrimitive.ItemIndicator>
+        <Check className="h-4 w-4" />
+      </SelectPrimitive.ItemIndicator>
+    </span>
+
+    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+  </SelectPrimitive.Item>
+))
+SelectItem.displayName = SelectPrimitive.Item.displayName
+
+const SelectSeparator = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Separator>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Separator ref={ref} className={cn("-mx-1 my-1 h-px bg-muted", className)} {...props} />
+))
+SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+  SelectScrollUpButton,
+  SelectScrollDownButton,
+}
+
+ARQUIVO: components/ui/textarea.tsx
+-----------------------------------
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({ className, ...props }, ref) => {
+  return (
+    <textarea
+      className={cn(
+        "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
+      ref={ref}
+      {...props}
+    />
+  )
+})
+Textarea.displayName = "Textarea"
+
+export { Textarea }
+
+================================================================================
+                            PARTE 3: EXECUÇÃO
+================================================================================
+
+PASSO 7: EXECUTAR APLICAÇÃO
+----------------------------
+npm run dev
+
+PASSO 8: ACESSAR APLICAÇÃO
+---------------------------
+Abrir navegador: http://localhost:3000
+
+================================================================================
+                            FUNCIONALIDADES
+================================================================================
+
+✅ Upload de dados CSV/JSON
+✅ Análise estatística automática
+✅ Visualizações interativas (gráficos)
+✅ Integração com Gemini AI
+✅ Insights inteligentes
+✅ Interface moderna e responsiva
+
+================================================================================
+                            TROUBLESHOOTING
+================================================================================
+
+ERRO: "Module not found"
+SOLUÇÃO: npm install --legacy-peer-deps
+
+ERRO: "GEMINI_API_KEY not found"
+SOLUÇÃO: Verificar arquivo .env.local
+
+ERRO: "Port 3000 already in use"
+SOLUÇÃO: npm run dev -- --port 3001
+
+ERRO: Dependências conflitantes
+SOLUÇÃO: npm cache clean --force && npm install --legacy-peer-deps
+
+================================================================================
+                            APRESENTAÇÃO
+================================================================================
+
+PONTOS PRINCIPAIS:
+- Aplicação moderna de análise de dados
+- Integração com IA (Google Gemini)
+- Interface intuitiva e profissional
+- Visualizações interativas
+- Análise estatística automática
+- Upload de dados simples
+
+DEMONSTRAÇÃO:
+1. Mostrar upload de dados
+2. Exibir análise estatística
+3. Criar visualizações
+4. Usar IA para insights
+5. Explicar funcionalidades
+
+================================================================================
+                                FIM
+================================================================================
