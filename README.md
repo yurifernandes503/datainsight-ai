@@ -1,4 +1,7 @@
 SISTEMA DE ANÁLISE DE DADOS COM INTELIGÊNCIA ARTIFICIAL – VERSÃO JAVA
+
+
+
 1 INTRODUÇÃO
 O presente projeto descreve o desenvolvimento de uma aplicação desktop em linguagem Java voltada para análise de dados corporativos com suporte à inteligência artificial. O sistema visa permitir a importação, processamento e visualização de dados estruturados, com geração de insights automatizados por meio da integração com o modelo Google Gemini AI.
 
